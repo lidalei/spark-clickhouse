@@ -100,3 +100,40 @@ salesRank - sales rank information
 brand - brand name
 categories - list of categories the product belongs to
 ```
+
+## Download files to a GCP compute engine
+
+```shell
+curl -o item_dedup.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz
+```
+
+gave
+
+```text
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 17.8G  100 17.8G    0     0  63.9M      0  0:04:45  0:04:45 --:--:-- 62.1M
+```
+
+```shell
+curl -o metadata.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/metadata.json.gz
+```
+
+gave
+
+```text
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 3202M  100 3202M    0     0  63.7M      0  0:00:50  0:00:50 --:--:-- 62.6M
+```
+
+```shell
+gzip -d -k metadata.json.gz
+head -1 metadata.json | jq .
+```
+
+gives
+
+```json
+{'asin': '0001048791', 'salesRank': {'Books': 6334800}, 'imUrl': 'http://ecx.images-amazon.com/images/I/51MKP0T4DBL.jpg', 'categories': [['Books']], 'title': 'The Crucible: Performed by Stuart Pankin, Jerome Dempsey &amp; Cast'}
+```
