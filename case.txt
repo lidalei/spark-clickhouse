@@ -1,0 +1,44 @@
+We would like to invite you to make the following case.
+ 
+As your role is all about working with data, could you please prepare a presentation around the following assignment using data on Amazon Reviews?
+ 
+
+The data is available at:
+·  Reviews: https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz
+·  Metadata: https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/metadata.json.gz
+ 
+
+Some descriptives on the dataset can be found at http://jmcauley.ucsd.edu/data/amazon/links.html
+ 
+Assignment
+Create a pipeline workflow for extracting data from the JSON files, transforming it into a dimensional model and importing it into a database/cluster/ DFS.
+Your solution must:
+·  Proper exception handling/logging for bulletproof runs (3 times a day)
+·  Expressive, re-usable, clean code
+·  Remarks / Comments of those parts (optimization) where you could speed up execution and/or save network traffic
+·  include dimensional modeling of data.
+·  contain product price as one of the fields in the dimensional model.
+·  handle duplicates.
+·  download the source data from the pipeline itself and have the ability to do the same at regular intervals. 
+·  use some scheduling framework or workflow platform.
+It would be good if your solution would:
+·  use containers.
+·  handle partial downloads and failures at getting the source data.
+·  be scalable in case new data were to flow in on a high-volume basis(10x bigger) and has to be imported at a higher frequency.
+·  be able to handle the json files as a stream/ abstract the file reading into a streaming model.
+·  describe the data store and tools used to query it - including the presentation layer.
+The final result must consist of the following 2 insights:
+·  Obtain histogram of review ratings - and be able to see a visualization of the same.
+·  Check if the products bought and viewed contained the same ids.
+ 
+
+During your presentation, you are expected to present your approach for each of the points above, including considerations of alternative approaches and how you decided on the best way to proceed. You should convince us of the way you modeled the data and your data pipelines. Please also present the challenges you faced and further ideas on what more could be done if this was a larger project with less tight of a deadline. 
+ 
+
+You can use whatever tools/languages in order to solve the questions. Please make the product in such a way so that you are sure it could run in a productionised setting. You will get 30-45 minutes to present your results to the team where after they will ask detailed questions. 
+ 
+
+Although the above assignment may feel specific and restrictive, please feel free to use your creativity and flexibility.
+ 
+
+Furthermore, please send in your code and presentation via email to our recruiter at the latest at 1.00 pm next week Thursday, 28.11.2019. 
