@@ -126,3 +126,12 @@ gave
                                  Dload  Upload   Total   Spent    Left  Speed
 100 3202M  100 3202M    0     0  63.7M      0  0:00:50  0:00:50 --:--:-- 62.6M
 ```
+
+
+### Stream remote json file
+
+```python
+import requests
+r = requests.get('https://api.github.com/events', stream=True)
+help(r.iter_lines)
+```
