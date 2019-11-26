@@ -126,14 +126,3 @@ gave
                                  Dload  Upload   Total   Spent    Left  Speed
 100 3202M  100 3202M    0     0  63.7M      0  0:00:50  0:00:50 --:--:-- 62.6M
 ```
-
-```shell
-gzip -d -k metadata.json.gz
-head -1 metadata.json | jq .
-```
-
-gives
-
-```json
-{'asin': '0001048791', 'salesRank': {'Books': 6334800}, 'imUrl': 'http://ecx.images-amazon.com/images/I/51MKP0T4DBL.jpg', 'categories': [['Books']], 'title': 'The Crucible: Performed by Stuart Pankin, Jerome Dempsey &amp; Cast'}
-```
