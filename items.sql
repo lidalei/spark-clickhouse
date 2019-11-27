@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS default.items
     unixReviewDate Date DEFAULT toDate(unixReviewTime) -- date of the review (unix time)
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(unixReviewDate)
-ORDER BY (asin, unixReviewTime)
+ORDER BY (asin, unixReviewDate)
