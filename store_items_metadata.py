@@ -38,11 +38,6 @@ def create_batch(iterator, batch_size: int):
         yield batch
 
 
-# def insert_batch(server: str, insert_sql: str, batch):
-#     cli = Client(server)
-#     return cli.execute(insert_sql, batch)
-
-
 def insert_partition(server: str, insert_sql: str, iterator: typing.Iterable, batch_size: int):
     # set logging format and level in worker
     logging.basicConfig(format=LOG_FORMAT)
@@ -104,8 +99,11 @@ def main(args: argparse.Namespace):
     sc = SparkContext(conf=conf)
     sc.setLogLevel('INFO')
 
+    # gzip file cannot be split. So only one worker is utilized.
+    #  We need to repartition RDD to parallelize.
     items = sc.textFile(args.items_dir)
-    j_items = items.map(lambda line: json.loads(line))
+    partitioned_items = items.repartition(4)
+    j_items = partitioned_items.map(lambda line: json.loads(line))
     """
     reviewerID FixedString(14), -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
     asin FixedString(10), -- ID of the product, e.g. 0000013714
@@ -130,7 +128,8 @@ def main(args: argparse.Namespace):
 
     # parse metadata json files
     metadata = sc.textFile(args.metadata_dir)
-    d_metadata = metadata.map(lambda line: eval(line))
+    partitioned_metadata = metadata.repartition(4)
+    d_metadata = partitioned_metadata.map(lambda line: eval(line))
     # print(d_metadata.sample(withReplacement=False, fraction=0.01).collect())
     """
     asin String, -- ID of the product, e.g. 0000013714
