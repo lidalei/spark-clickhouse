@@ -157,6 +157,18 @@ if __name__ == '__main__':
         help='an SQL file which creates clickhouse table items'
     )
     parser.add_argument(
+        '--metadata-table-name',
+        type=str,
+        default='metadata',
+        help='clickhouse table name of metadata'
+    )
+    parser.add_argument(
+        '--metadata-table-sql',
+        type=str,
+        default='metadata.sql',
+        help='an SQL file which creates clickhouse table metadata'
+    )
+    parser.add_argument(
         '--batch-size',
         type=str,
         default=100,
