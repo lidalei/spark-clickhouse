@@ -17,7 +17,8 @@ services:
     volumes:
       - ./users.xml:/etc/clickhouse-server/users.xml
   spark-job:
-    build: .
+    build:
+      dockerfile: Dockerfile
     environment:
       - CLICKHOUSE_PASSWORD
     ports:
