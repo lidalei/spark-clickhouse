@@ -5,7 +5,7 @@ import multiprocessing
 import typing
 from datetime import datetime
 
-from clickhouse_driver.errors import ServerException, LogicalError, NetworkError
+from clickhouse_driver.errors import ServerException, LogicalError, NetworkError, SocketTimeoutError
 from pyspark import SparkContext, SparkConf
 from pyspark.streaming import StreamingContext
 from retry import retry
@@ -25,7 +25,7 @@ class ClickhouseClient(object):
         # perform a test
         self.test()
 
-    @retry((NetworkError,), tries=5, delay=1, backoff=2, jitter=1, max_delay=10)
+    @retry((NetworkError, ConnectionResetError,), tries=5, delay=1, backoff=2, jitter=1, max_delay=10)
     def test(self):
         res = self.cli.execute('SELECT 1 + 1')
         if res[0][0] != 2:
@@ -34,9 +34,15 @@ class ClickhouseClient(object):
     def execute_sql(self, sql: str):
         return self.cli.execute(sql)
 
-    @retry((Exception,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
+    @retry((ServerException, SocketTimeoutError, NetworkError,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
     def insert_partition(self, insert_sql: str, iterator: typing.Iterable):
-        n = self.cli.execute(insert_sql, iterator)
+        logging.error(f'type: {type(iterator)}')
+
+        def generator():
+            for v in iterator:
+                yield v
+
+        n = self.cli.execute(insert_sql, generator())
         logging.info(f'inserted {n} rows')
 
 
@@ -70,13 +76,14 @@ def parse_review_time(x: dict) -> int:
 
 def main(args: argparse.Namespace):
     # construct clickhouse host url
-    ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
+    ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/default'
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
     # check if items and metadata table exist
     tables = [args.items_table_name, args.metadata_table_name]
     res = ck_cli.execute_sql(f'SHOW TABLES FROM {args.clickhouse_db}')
+    db_tables = [t[0] for t in res]
     for table in tables:
-        if table not in res[0]:
+        if table not in db_tables:
             logging.error(
                 f'table {table} does not exist, create it and retry later')
             return
@@ -156,7 +163,7 @@ def main(args: argparse.Namespace):
 
 def stream_main(args: argparse.Namespace):
     # construct clickhouse host url
-    ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
+    ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/default'
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
     # create items and metadata table
 
@@ -259,10 +266,10 @@ if __name__ == '__main__':
         help='clickhouse server database'
     )
     parser.add_argument(
-        '--clickhouse-username',
+        '--clickhouse-user',
         type=str,
         default='default',
-        help='clickhouse server username'
+        help='clickhouse server user'
     )
     parser.add_argument(
         '--clickhouse-password',

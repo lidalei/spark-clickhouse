@@ -4,6 +4,57 @@ We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
 
 ## Run
 
+1. Run `scrips/install.sh` to install Docker and Docker Compose on Ubuntu
+
+2. Run `scripts/run.sh` to read data and store parsed data in clickhouse
+
+3. Expose Clickhouse HTTP interface
+
+  ```shell
+  # forward clickhouse http interface
+  # gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-3" -- -L 4040:localhost:4040 -L 8888:localhost:8888
+
+  # give 127.0.0.1:8888 a public host so that grafana in a container does not resolve it wronlgy
+  # ngrok http 8888
+  ```
+  
+  `localhost:4040` points to Spark UI while `localhost:8888` points to Clickhouse HTTP interface.
+
+  We need ngrok to give `localhost:8888` a unique and public accessible host so that grafana (in a container) is not confused.
+
+4. Run `scripts/start-grafana.sh` to start a grafana container
+  
+  Visit [grafana](localhost:3000) to access grafana
+
+5. Create a Grafana dashboard to show review histogram
+
+## Spark Job
+
+### Obsevations
+
+* a gzipped file has to be read from its beginning to its end, which limits Spark's parallelism. So we run `gzip -k -d item_dedup_sample.json.gz` to unzip it first.
+
+* The items file consists corrupted data, e.g. missing `unixReviewTime`, invalid `reviewTime` (`' 5, 2013'`). The strategy we take is to filter out data without required fields such as `reviewerID` and check if an optional field exists before accesing it.
+
+* In a bigdata environment, errors are very hard to avoid. The startegy we take is to retry (for retryable errors).
+
+### Stream local / remote gzipped json file
+
+Since the file can be very large, processing while streaming it can take a while (ETL). So it is better to download to local storage and process it (ELT).
+
+A python code to stream a remote gzipped json file with streaming in requests.
+
+```python
+import requests
+r = requests.get('https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz', stream=True)
+help(r.iter_lines)
+```
+
+We also thought about setting a Kafka cluster to post json objects and the Spark job can consume from Kafka.
+
+We also thought about sending json objects to local socket and the Spark job can use `socketTextStream` to read from it.
+
+However, setting a Kafka cluster requires ZooKeeper and using `socketTextStream` is a bit tricky. The lastest stable Spark version 2.4.4 does not support Customer Source yet. So we decided to directly read from a large local json file, though unzipping took quite a bit time.
 
 ## Reviews
 
@@ -77,16 +128,4 @@ categories - list of categories the product belongs to
 ```shell
 curl -o item_dedup.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz
 curl -o metadata.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/metadata.json.gz
-```
-
-```shell
-
-```
-
-### Stream remote json file
-
-```python
-import requests
-r = requests.get('https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz', stream=True)
-help(r.iter_lines)
 ```
