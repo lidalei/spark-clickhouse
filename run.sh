@@ -15,8 +15,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
 sudo apt-key fingerprint 0EBFCD88
 
-sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 
 sudo apt-get update && sudo apt-get install docker-ce docker-ce-cli containerd.io
 
@@ -41,16 +40,37 @@ newgrp docker
 docker run hello-world
 ## end docker postinstall
 
+## install docker-compose 
+# https://docs.docker.com/compose/install/
+sudo curl -L "https://github.com/docker/compose/releases/download/1.25.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+# sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
 ## check if docker service starts on boot
 # systemctl list-unit-files | grep enabled
 # enable / disable this behavior
 # sudo systemctl enable docker
 # sudo systemctl disable docker
 ## end check if docker service starts on boot
-### The previous commands are run in VM
+
+# install python
+sudo apt-get install python3.7 python3-pip
+# install jdk 11
+# sudo apt-get install default-jdk
 
 docker run -d --name local-clickhouse-server --ulimit nofile=262144:262144 -p 9000:9000 yandex/clickhouse-server
 # attach to the container
-docker ps -all
+# docker ps -all
 # assume clickhouse container id is ec9debd359e1
-docker exec -it ec9debd359e1 /bin/bash
+# docker exec -it ec9debd359e1 /bin/bash
+
+# clone repository
+git clone git@github.com:lidalei/spark-clickhouse.git
+cd spark-clickhouse
+python3.7 -m pip install -r requirements.txt --user
+
+### The previous commands are run in VM
+
+
+# after renaming / moving a git repository
+# git remote set-url origin git@github.com:lidalei/spark-clickhouse.git

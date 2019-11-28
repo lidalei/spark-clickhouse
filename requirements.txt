@@ -1,2 +1,2 @@
 pyspark == 2.4.4
-clickhouse-driver == 0.1.2
+clickhouse-driver[lz4,zstd] == 0.1.2

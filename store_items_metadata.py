@@ -56,7 +56,8 @@ def insert_partition(server: str, insert_sql: str, iterator: typing.Iterable, ba
         else:
             total_rows_inserted += n
 
-    logging.info(f'in total, successfully inserted {total_rows_inserted} rows, failed to insert {total_rows_failed} rows')
+    logging.info(
+        f'in total, successfully inserted {total_rows_inserted} rows, failed to insert {total_rows_failed} rows')
 
 
 def same_also_bought_also_viewed(product: dict):
@@ -89,7 +90,8 @@ def main(args: argparse.Namespace):
     exceptions = create_tables(args.clickhouse_server, sqls)
     for table, e in zip(tables, exceptions):
         if e is not None:
-            logging.error(f'failed to create table using {table}, exception: {e}')
+            logging.error(
+                f'failed to create table using {table}, exception: {e}')
             return
 
     logging.info(f'successfully created tables {tables}')

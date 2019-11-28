@@ -1,0 +1,20 @@
+version: "3"
+services:
+  spark-job:
+    build: .
+    ports:
+      # UI
+      - "4040:4040"
+    volumes:
+      - ./data:/app/data
+  clickhouse:
+    image: "yandex/clickhouse-server"
+    ulimits:
+      nofile:
+        soft: "262144"
+        hard: "262144"
+    ports:
+      # native client port
+      - "9999:9000"
+    volumes:
+      - ./users.xml:/etc/clickhouse-server/users.xml
