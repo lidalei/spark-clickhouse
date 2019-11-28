@@ -90,6 +90,16 @@ def same_also_bought_also_viewed(product: dict):
     return set(related['also_viewed']) == set(related['also_viewed'])
 
 
+def parse_review_time(x: dict) -> int:
+    try:
+        if 'unixReviewTime' in x:
+            return int(x['unixReviewTime'])
+
+        if 'reviewTime' in x:
+            return int(datetime.strptime(x['reviewTime'], '%m %d, %Y').timestamp())
+    except:
+        return 0
+
 def main(args: argparse.Namespace):
     # construct clickhouse host url
     ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
@@ -141,10 +151,7 @@ def main(args: argparse.Namespace):
         'reviewerID': x['reviewerID'],
         'asin': x['asin'],
         'overall': int(x['overall']),
-        'unixReviewTime': int(x['unixReviewTime']) if 'unixReviewTime' in x else (
-            int(datetime.strptime(
-                x['reviewTime'], '%m %d, %Y').timestamp()) if 'reviewTime' in x else 0
-        )
+        'unixReviewTime': parse_review_time(x),
     })
 
     # we establish a connection for each partition
