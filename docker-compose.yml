@@ -4,19 +4,14 @@ services:
     image: "yandex/clickhouse-server"
     ulimits:
       nofile:
-        soft: "262144"
-        hard: "262144"
+        soft: 262144
+        hard: 262144
     ports:
       - "9999:9000" # native interface
       - "8888:8123" # http interface
-    deploy:
-      resources:
-        limits:
-          cpus: "8"
-          memory: 4G
-        reservations:
-          cpus: "2"
-          memory: 1G
+    cpus: 8.0
+    mem_limit: 4G
+    mem_reservation: 1G
     healthcheck:
       test: ["CMD", "curl", "http://localhost:8123/"]
       interval: 30s
@@ -35,25 +30,16 @@ services:
     ports:
       # UI
       - "4040:4040"
-    deploy:
-      resources:
-        limits:
-          cpus: "16"
-          memory: 8G
-        reservations:
-          cpus: "2"
-          memory: 2G
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
+    cpus: 10.0
+    mem_limit: 10G
+    mem_reservation: 2G
     volumes:
       - ./data:/app/data
     depends_on:
       - clickhouse
     links:
       - clickhouse
+    restart: on-failure
   grafana:
     # TODO: use chproxy to cache response, rate limit requests
     image: "grafana/grafana"
@@ -63,11 +49,6 @@ services:
       GF_INSTALL_PLUGINS: "vertamedia-clickhouse-datasource"
       GF_SECURITY_ADMIN_USER: "guess"
       GF_SECURITY_ADMIN_PASSWORD: "youneverknow"
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 500M
+    cpus: 2.0
+    mem_limit: 1G
+    mem_reservation: 500M
