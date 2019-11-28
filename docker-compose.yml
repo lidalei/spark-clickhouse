@@ -1,12 +1,5 @@
 version: "3"
 services:
-  spark-job:
-    build: .
-    ports:
-      # UI
-      - "4040:4040"
-    volumes:
-      - ./data:/app/data
   clickhouse:
     image: "yandex/clickhouse-server"
     ulimits:
@@ -14,7 +7,26 @@ services:
         soft: "262144"
         hard: "262144"
     ports:
-      # native client port
-      - "9999:9000"
+      - "9999:9000" # native interface
+      - "8888:8123" # http interface
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8123/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     volumes:
       - ./users.xml:/etc/clickhouse-server/users.xml
+  spark-job:
+    build: .
+    environment:
+      - CLICKHOUSE_PASSWORD
+    ports:
+      # UI
+      - "4040:4040"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - clickhouse
+    links:
+      - clickhouse
+    restart: on-failure

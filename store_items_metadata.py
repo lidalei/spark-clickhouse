@@ -1,9 +1,10 @@
 import argparse
 import json
 import logging
+import multiprocessing
 import typing
 
-from clickhouse_driver.errors import ServerException
+from clickhouse_driver.errors import ServerException, LogicalError
 from pyspark import SparkContext, SparkConf
 # from pyspark.streaming import StreamingContext
 
@@ -12,18 +13,47 @@ from clickhouse_driver import Client
 LOG_FORMAT = '%(asctime)s %(process)d %(filename)s %(lineno)d %(message)s'
 
 
-def create_tables(server: str, sqls: typing.List[str]) -> typing.List[Exception]:
-    cli = Client(server)
-    exceptions = []
-    for sql in sqls:
-        try:
-            cli.execute(sql)
-        except (ServerException, Exception) as e:
-            exceptions.append(e)
-        else:
-            exceptions.append(None)
+class ClickhouseClient(object):
+    def __init__(self, host, logfmt, loglvl=logging.INFO):
+        self.host = host
+        self.cli = Client.from_url(host)
+        # perform a test
+        sum = self.cli.execute('SELECT 1 + 1')
+        if sum[0][0] != 2:
+            raise LogicalError(f'1 + 1 = {sum[0][0]}')
 
-    return exceptions
+        # set logging format and level in driver / worker
+        logging.basicConfig(format=logfmt)
+        logging.getLogger().setLevel(loglvl)
+
+    def execute_sqls(self, sqls: typing.List[str]) -> typing.List[Exception]:
+        """connect to clickhouse server and execute given sql statements """
+        exceptions = []
+        for sql in sqls:
+            try:
+                self.cli.execute(sql)
+            except (ServerException, Exception) as e:
+                exceptions.append(e)
+            else:
+                exceptions.append(None)
+
+        return exceptions
+
+    def insert_partition(self, insert_sql: str, iterator: typing.Iterable, batch_size: int):
+        total_rows_inserted = 0
+        total_rows_failed = 0
+        for batch in create_batch(iterator, batch_size):
+            try:
+                n = self.cli.execute(insert_sql, batch)
+                logging.info(f'inserted {n} rows')
+            except (ServerException, Exception):
+                total_rows_failed += len(batch)
+                logging.exception('failed to insert a batch')
+            else:
+                total_rows_inserted += n
+
+        logging.info(
+            f'in total, successfully inserted {total_rows_inserted} rows, failed to insert {total_rows_failed} rows')
 
 
 def create_batch(iterator, batch_size: int):
@@ -36,28 +66,6 @@ def create_batch(iterator, batch_size: int):
     # yield final batch
     if len(batch) > 0:
         yield batch
-
-
-def insert_partition(server: str, insert_sql: str, iterator: typing.Iterable, batch_size: int):
-    # set logging format and level in worker
-    logging.basicConfig(format=LOG_FORMAT)
-    logging.getLogger().setLevel(logging.INFO)
-
-    cli = Client(server)
-    total_rows_inserted = 0
-    total_rows_failed = 0
-    for batch in create_batch(iterator, batch_size):
-        try:
-            n = cli.execute(insert_sql, batch)
-            logging.info(f'inserted {n} rows')
-        except (ServerException, Exception):
-            total_rows_failed += len(batch)
-            logging.exception('failed to insert a batch')
-        else:
-            total_rows_inserted += n
-
-    logging.info(
-        f'in total, successfully inserted {total_rows_inserted} rows, failed to insert {total_rows_failed} rows')
 
 
 def same_also_bought_also_viewed(product: dict):
@@ -78,6 +86,10 @@ def same_also_bought_also_viewed(product: dict):
 
 
 def main(args: argparse.Namespace):
+    # construct clickhouse host url
+    ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
+    logging.info(f'clickhouse host: {ck_host}')
+    ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
     # create items and metadata table
     with open(args.items_table_sql) as sql_file:
         items_sql = sql_file.read()
@@ -87,7 +99,7 @@ def main(args: argparse.Namespace):
 
     tables = [args.items_table_name, args.metadata_table_name]
     sqls = [items_sql, metadata_sql]
-    exceptions = create_tables(args.clickhouse_server, sqls)
+    exceptions = ck_cli.execute_sqls(sqls)
     for table, e in zip(tables, exceptions):
         if e is not None:
             logging.error(
@@ -104,7 +116,7 @@ def main(args: argparse.Namespace):
     # gzip file cannot be split. So only one worker is utilized.
     #  We need to repartition RDD to parallelize.
     items = sc.textFile(args.items_dir)
-    partitioned_items = items.repartition(4)
+    partitioned_items = items.repartition(args.num_partitions)
     j_items = partitioned_items.map(lambda line: json.loads(line))
     """
     reviewerID FixedString(14), -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
@@ -119,9 +131,9 @@ def main(args: argparse.Namespace):
         'unixReviewTime': int(x['unixReviewTime'])
     })
 
+    # we establish a connection for each partition
     dict_items.foreachPartition(
-        lambda iterator: insert_partition(
-            args.clickhouse_server,
+        lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
             f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
             iterator,
             args.batch_size
@@ -130,7 +142,7 @@ def main(args: argparse.Namespace):
 
     # parse metadata json files
     metadata = sc.textFile(args.metadata_dir)
-    partitioned_metadata = metadata.repartition(4)
+    partitioned_metadata = metadata.repartition(args.num_partitions)
     d_metadata = partitioned_metadata.map(lambda line: eval(line))
     # print(d_metadata.sample(withReplacement=False, fraction=0.01).collect())
     """
@@ -147,8 +159,7 @@ def main(args: argparse.Namespace):
     })
 
     dict_metadata.foreachPartition(
-        lambda iterator: insert_partition(
-            args.clickhouse_server,
+        lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
             f'INSERT INTO {args.metadata_table_name} (asin, price_in_cents, same_viewed_bought) VALUES',
             iterator,
             args.batch_size
@@ -186,6 +197,12 @@ if __name__ == '__main__':
         default='local[*]',
         help='Spark master'
     )
+    parser.add_argument(
+        '--num-partitions',
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help='number of partitions to parallelize processing, e.g. cpu cores * number of workers'
+    )
 
     parser.add_argument(
         '--items-dir',
@@ -203,8 +220,20 @@ if __name__ == '__main__':
     parser.add_argument(
         '--clickhouse-server',
         type=str,
-        default='localhost',
+        default='localhost:9000',
         help='clickhouse server address'
+    )
+    parser.add_argument(
+        '--clickhouse-username',
+        type=str,
+        default='default',
+        help='clickhouse server username'
+    )
+    parser.add_argument(
+        '--clickhouse-password',
+        type=str,
+        default='',
+        help='clickhouse server password'
     )
     parser.add_argument(
         '--items-table-name',
@@ -232,8 +261,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--batch-size',
-        type=str,
-        default=100,
+        type=int,
+        default=1000,
         help='batch size when inserting rows into clickhouse table items'
     )
 

@@ -71,6 +71,9 @@ python3.7 -m pip install -r requirements.txt --user
 
 ### The previous commands are run in VM
 
+export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
+docker-compose up   
+
 
 # after renaming / moving a git repository
 # git remote set-url origin git@github.com:lidalei/spark-clickhouse.git
