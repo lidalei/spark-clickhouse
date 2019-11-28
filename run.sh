@@ -41,3 +41,6 @@ sudo docker-compose build
 # export NUM_PARTITIONS=1000
 # export BATCH_SIZE=1000
 sudo docker-compose up
+
+# check runnig containers status
+# docker stats

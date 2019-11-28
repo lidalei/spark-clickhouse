@@ -3,10 +3,10 @@ import json
 import logging
 import multiprocessing
 import typing
+from datetime import datetime
 
 from clickhouse_driver.errors import ServerException, LogicalError, NetworkError
 from pyspark import SparkContext, SparkConf
-from pyspark.rdd import RDD
 from pyspark.streaming import StreamingContext
 from retry import retry
 from clickhouse_driver import Client
@@ -132,11 +132,16 @@ def main(args: argparse.Namespace):
     overall UInt8, -- rating of the product, e.g. 5
     unixReviewTime DateTime('UTC') -- time of the review (unix time)
     """
-    dict_items = j_items.map(lambda x: {
+    cleaned_j_items = j_items.filter(
+        lambda x: ('reviewerID' in x) and ('asin' in x) and ('overall' in x)
+    )
+    dict_items = cleaned_j_items.map(lambda x: {
         'reviewerID': x['reviewerID'],
         'asin': x['asin'],
         'overall': int(x['overall']),
-        'unixReviewTime': int(x['unixReviewTime'])
+        'unixReviewTime': int(x['unixReviewTime']) if 'unixReviewTime' in x else (
+            int(datetime.strptime(x['reviewTime'], '%m %d, %Y').timestamp()) if 'reviewTime' in x else 0
+        )
     })
 
     # we establish a connection for each partition
@@ -159,7 +164,10 @@ def main(args: argparse.Namespace):
     price Nullable(Decimal(10, 2)), -- price in decimal
     same_viewed_bought UInt8 -- if also_bought identical to also_viewed, 0 means no, any other value means yes
     """
-    dict_metadata = d_metadata.map(lambda x: {
+    cleaned_d_metadata = d_metadata.filter(
+        lambda x: 'asin' in x
+    )
+    dict_metadata = cleaned_d_metadata.map(lambda x: {
         'asin': x['asin'],
         # we know the price has two digits in fraction and can be represented precisely in float
         'price_in_cents': int(100 * x['price']) if 'price' in x else None,
