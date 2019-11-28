@@ -9,7 +9,6 @@ services:
     ports:
       - "9999:9000" # native interface
       - "8888:8123" # http interface
-    cpus: 8.0
     mem_limit: 4G
     mem_reservation: 1G
     healthcheck:
@@ -31,7 +30,6 @@ services:
     ports:
       # UI
       - "4040:4040"
-    cpus: 10.0
     mem_limit: 10G
     mem_reservation: 2G
     volumes:
@@ -50,6 +48,5 @@ services:
       GF_INSTALL_PLUGINS: "vertamedia-clickhouse-datasource"
       GF_SECURITY_ADMIN_USER: "guess"
       GF_SECURITY_ADMIN_PASSWORD: "youneverknow"
-    cpus: 2.0
     mem_limit: 1G
     mem_reservation: 500M
