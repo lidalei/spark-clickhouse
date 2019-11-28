@@ -38,5 +38,6 @@ sudo docker-compose build
 # export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
 # export ITEMS_DIR=data/items
 # export METADATA_DIR=data/metadata
-# export NUM_PARTITIONS=1
+# export NUM_PARTITIONS=1000
+# export BATCH_SIZE=1000
 sudo docker-compose up

@@ -6,7 +6,8 @@ import typing
 
 from clickhouse_driver.errors import ServerException, LogicalError, NetworkError
 from pyspark import SparkContext, SparkConf
-# from pyspark.streaming import StreamingContext
+from pyspark.rdd import RDD
+from pyspark.streaming import StreamingContext
 from retry import retry
 from clickhouse_driver import Client
 
@@ -173,16 +174,62 @@ def main(args: argparse.Namespace):
         )
     )
 
-    """
-    # Create a local StreamingContext with two working thread and batch interval of 1 second
-    sc = SparkContext("local[*]", "StoreItem")
-    ssc = StreamingContext(sc, 1)
+
+def stream_main(args: argparse.Namespace):
+    # construct clickhouse host url
+    ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
+    ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
+    # create items and metadata table
+    with open(args.items_table_sql) as sql_file:
+        items_sql = sql_file.read()
+
+    with open(args.metadata_table_sql) as sql_file:
+        metadata_sql = sql_file.read()
+
+    tables = [args.items_table_name, args.metadata_table_name]
+    sqls = [items_sql, metadata_sql]
+    exceptions = ck_cli.execute_sqls(sqls)
+    for table, e in zip(tables, exceptions):
+        if e is not None:
+            logging.error(
+                f'failed to create table using {table}, exception: {e}')
+            return
+
+    logging.info(f'successfully created tables {tables}')
+
+    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
+        'spark.executor.memory', '2g'
+    ).set(
+        'spark.driver.memory', '2g'
+    )
+    sc = SparkContext(conf=conf)
+    # Create a local StreamingContext with two working thread and batch interval of 10 seconds
+    # FIXME! 10s -> XXX
+    ssc = StreamingContext(sc, batchDuration=10)
     items = ssc.textFileStream(args.items_dir)
     items.count().pprint()
 
+    j_items = items.map(lambda line: json.loads(line))
+    dict_items = j_items.map(lambda x: {
+        'reviewerID': x['reviewerID'],
+        'asin': x['asin'],
+        'overall': int(x['overall']),
+        'unixReviewTime': int(x['unixReviewTime'])
+    })
+
+    # we establish a connection for each partition
+    dict_items.foreachRDD(
+        lambda rdd: rdd.foreachPartition(
+            lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
+                f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
+                iterator,
+                args.batch_size
+            )
+        )
+    )
+
     ssc.start()             # Start the computation
     ssc.awaitTermination()  # Wait for the computation to terminate
-    """
 
 
 if __name__ == '__main__':
@@ -274,6 +321,7 @@ if __name__ == '__main__':
     )
 
     args, _ = parser.parse_known_args()
-    logging.debug(f'args: {args}')
+    logging.info(f'args: {args}')
 
+    # stream_main(args)
     main(args)

@@ -1,3 +1,4 @@
 pyspark == 2.4.4
 clickhouse-driver[lz4,zstd] == 0.1.2
 retry == 0.9.2
+psutil == 5.6.7
