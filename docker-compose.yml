@@ -9,6 +9,14 @@ services:
     ports:
       - "9999:9000" # native interface
       - "8888:8123" # http interface
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: 4G
+        reservations:
+          cpus: "2"
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "http://localhost:8123/"]
       interval: 30s
@@ -27,6 +35,14 @@ services:
     ports:
       # UI
       - "4040:4040"
+    deploy:
+      resources:
+        limits:
+          cpus: "16"
+          memory: 8G
+        reservations:
+          cpus: "2"
+          memory: 2G
     volumes:
       - ./data:/app/data
     depends_on:
@@ -43,3 +59,11 @@ services:
       GF_INSTALL_PLUGINS: "vertamedia-clickhouse-datasource"
       GF_SECURITY_ADMIN_USER: "guess"
       GF_SECURITY_ADMIN_PASSWORD: "youneverknow"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 500M
