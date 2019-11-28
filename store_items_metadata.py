@@ -113,7 +113,11 @@ def main(args: argparse.Namespace):
     logging.info(f'successfully created tables {tables}')
 
     # parse items json files
-    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master)
+    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
+        'spark.executor.memory', '4g'
+    ).set(
+        'spark.driver.memory', '4g'
+    )
     sc = SparkContext(conf=conf)
     sc.setLogLevel('INFO')
 
