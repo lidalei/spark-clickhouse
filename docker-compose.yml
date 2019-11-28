@@ -27,6 +27,7 @@ services:
       - NUM_PARTITIONS=1
       - ITEMS_DIR=data/items
       - METADATA_DIR=data/metadata
+      - BATCH_SIZE=1000
     ports:
       # UI
       - "4040:4040"
