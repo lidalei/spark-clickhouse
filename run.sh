@@ -21,7 +21,8 @@ echo "files are ready"
 # build docker containers
 docker-compose build
 # run spark job to read those files and write to clickhouse
-export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
-export ITEMS_DIR=data/items
-export METADATA_DIR=data/metadata
+# export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
+# export ITEMS_DIR=data/items
+# export METADATA_DIR=data/metadata
+# export NUM_PARTITIONS=1
 docker-compose up   
