@@ -92,7 +92,6 @@ def same_also_bought_also_viewed(product: dict):
 def main(args: argparse.Namespace):
     # construct clickhouse host url
     ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
-    logging.info(f'clickhouse host: {ck_host}')
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
     # create items and metadata table
     with open(args.items_table_sql) as sql_file:

@@ -18,11 +18,25 @@ else
 fi
 echo "files are ready"
 
+## docker postinstall
+# https://docs.docker.com/install/linux/linux-postinstall/
+# sudo groupadd docker
+# sudo usermod -aG docker $USER
+# exit
+
+## restart VM
+# gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-1"
+# activate the changes to groups
+# newgrp docker
+# verify
+# docker run hello-world
+## end docker postinstall
+
 # build docker containers
-docker-compose build
+sudo docker-compose build
 # run spark job to read those files and write to clickhouse
 # export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
 # export ITEMS_DIR=data/items
 # export METADATA_DIR=data/metadata
 # export NUM_PARTITIONS=1
-docker-compose up   
+sudo docker-compose up
