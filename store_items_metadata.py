@@ -231,8 +231,6 @@ def stream_main(args: argparse.Namespace):
     ssc.start()             # Start the computation
 
     # rename file
-    with
-
     ssc.awaitTermination()  # Wait for the computation to terminate
 
 

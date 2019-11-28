@@ -24,7 +24,7 @@ echo "files are ready"
 # sudo usermod -aG docker $USER
 # exit
 
-## restart VM
+## reconnect o VM
 # gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-1"
 # activate the changes to groups
 # newgrp docker
