@@ -17,12 +17,15 @@ services:
       timeout: 5s
       retries: 3
     volumes:
-      - ./users.xml:/etc/clickhouse-server/users.xml
+      - ./clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
   spark-job:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
+      - CLICKHOUSE_SERVER=${CLICKHOUSE_SERVER}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
       # - NUM_PARTITIONS=${NUM_PARTITIONS}
       - ITEMS_DIR=${ITEMS_DIR}

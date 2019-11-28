@@ -31,18 +31,8 @@ class ClickhouseClient(object):
         if res[0][0] != 2:
             raise LogicalError(f'1 + 1 = {res[0][0]}')
 
-    def execute_sqls(self, sqls: typing.List[str]) -> typing.List[Exception]:
-        """connect to clickhouse server and execute given sql statements """
-        exceptions = []
-        for sql in sqls:
-            try:
-                self.cli.execute(sql)
-            except (ServerException, Exception) as e:
-                exceptions.append(e)
-            else:
-                exceptions.append(None)
-
-        return exceptions
+    def execute_sql(self, sql: str):
+        return self.cli.execute(sql)
 
     @retry((Exception,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
     def insert_partition(self, insert_sql: str, iterator: typing.Iterable):
@@ -82,20 +72,13 @@ def main(args: argparse.Namespace):
     # construct clickhouse host url
     ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
-    # create items and metadata table
-    with open(args.items_table_sql) as sql_file:
-        items_sql = sql_file.read()
-
-    with open(args.metadata_table_sql) as sql_file:
-        metadata_sql = sql_file.read()
-
+    # check if items and metadata table exist
     tables = [args.items_table_name, args.metadata_table_name]
-    sqls = [items_sql, metadata_sql]
-    exceptions = ck_cli.execute_sqls(sqls)
-    for table, e in zip(tables, exceptions):
-        if e is not None:
+    res = ck_cli.execute_sql(f'SHOW TABLES FROM {args.clickhouse_db}')
+    for table in tables:
+        if table not in res[0]:
             logging.error(
-                f'failed to create table using {table}, exception: {e}')
+                f'table {table} does not exist, create it and retry later')
             return
 
     logging.info(f'successfully created tables {tables}')
@@ -176,19 +159,14 @@ def stream_main(args: argparse.Namespace):
     ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
     # create items and metadata table
-    with open(args.items_table_sql) as sql_file:
-        items_sql = sql_file.read()
 
-    with open(args.metadata_table_sql) as sql_file:
-        metadata_sql = sql_file.read()
-
+    # check if items and metadata table exist
     tables = [args.items_table_name, args.metadata_table_name]
-    sqls = [items_sql, metadata_sql]
-    exceptions = ck_cli.execute_sqls(sqls)
-    for table, e in zip(tables, exceptions):
-        if e is not None:
+    res = ck_cli.execute_sql(f'SHOW TABLES FROM {args.clickhouse_db}')
+    for table in tables:
+        if table not in res[0]:
             logging.error(
-                f'failed to create table using {table}, exception: {e}')
+                f'table {table} does not exist, create it and retry later')
             return
 
     logging.info(f'successfully created tables {tables}')
@@ -275,6 +253,12 @@ if __name__ == '__main__':
         help='clickhouse server address'
     )
     parser.add_argument(
+        '--clickhouse-db',
+        type=str,
+        default='default',
+        help='clickhouse server database'
+    )
+    parser.add_argument(
         '--clickhouse-username',
         type=str,
         default='default',
@@ -293,22 +277,10 @@ if __name__ == '__main__':
         help='clickhouse table name of items'
     )
     parser.add_argument(
-        '--items-table-sql',
-        type=str,
-        default='items.sql',
-        help='an SQL file which creates clickhouse table items'
-    )
-    parser.add_argument(
         '--metadata-table-name',
         type=str,
         default='metadata',
         help='clickhouse table name of metadata'
-    )
-    parser.add_argument(
-        '--metadata-table-sql',
-        type=str,
-        default='metadata.sql',
-        help='an SQL file which creates clickhouse table metadata'
     )
 
     args, _ = parser.parse_known_args()
