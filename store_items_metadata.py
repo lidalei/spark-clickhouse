@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--app-name',
         type=str,
-        default='store_item',
+        default='Store Items and Metadata',
         help='Spark App name shown in UI'
     )
     parser.add_argument(

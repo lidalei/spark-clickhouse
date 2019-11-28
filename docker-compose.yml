@@ -22,6 +22,8 @@ services:
       dockerfile: Dockerfile
     environment:
       - CLICKHOUSE_PASSWORD
+      - ITEMS_DIR=data/items
+      - METADATA_DIR=data/metadata
     ports:
       # UI
       - "4040:4040"

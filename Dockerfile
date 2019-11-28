@@ -15,4 +15,4 @@ WORKDIR /app
 COPY . /app
 
 # clickhouse is the clickhouse service name in docker compose
-CMD ["/bin/bash", "-c", "python3 store_items_metadata.py --clickhouse-server=clickhouse:9000 --clickhouse-password=${CLICKHOUSE_PASSWORD} --batch-size=10000"]
+CMD ["/bin/bash", "-c", "python3 store_items_metadata.py --clickhouse-server=clickhouse:9000 --clickhouse-password=${CLICKHOUSE_PASSWORD} --items-dir=${ITEMS_DIR} --metadata-dir=${METADATA_DIR} --batch-size=10000"]
