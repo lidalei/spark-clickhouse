@@ -124,8 +124,10 @@ def main(args: argparse.Namespace):
     # gzip file cannot be split. So only one worker is utilized.
     #  We need to repartition RDD to parallelize.
     items = sc.textFile(args.items_dir)
-    partitioned_items = items.repartition(args.num_partitions)
-    j_items = partitioned_items.map(lambda line: json.loads(line))
+    j_items = items.map(lambda line: json.loads(line))
+    # FIXME!
+    # partitioned_items = items.repartition(args.num_partitions)
+    # j_items = partitioned_items.map(lambda line: json.loads(line))
     """
     reviewerID FixedString(14), -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
     asin FixedString(10), -- ID of the product, e.g. 0000013714
@@ -140,7 +142,8 @@ def main(args: argparse.Namespace):
         'asin': x['asin'],
         'overall': int(x['overall']),
         'unixReviewTime': int(x['unixReviewTime']) if 'unixReviewTime' in x else (
-            int(datetime.strptime(x['reviewTime'], '%m %d, %Y').timestamp()) if 'reviewTime' in x else 0
+            int(datetime.strptime(
+                x['reviewTime'], '%m %d, %Y').timestamp()) if 'reviewTime' in x else 0
         )
     })
 
@@ -155,8 +158,10 @@ def main(args: argparse.Namespace):
 
     # parse metadata json files
     metadata = sc.textFile(args.metadata_dir)
-    partitioned_metadata = metadata.repartition(args.num_partitions)
-    d_metadata = partitioned_metadata.map(lambda line: eval(line))
+    d_metadata = metadata.map(lambda line: eval(line))
+    # FIXME!
+    # partitioned_metadata = metadata.repartition(args.num_partitions)
+    # d_metadata = partitioned_metadata.map(lambda line: eval(line))
     # print(d_metadata.sample(withReplacement=False, fraction=0.01).collect())
     """
     asin String, -- ID of the product, e.g. 0000013714
@@ -261,12 +266,12 @@ if __name__ == '__main__':
         default='local[*]',
         help='Spark master'
     )
-    parser.add_argument(
-        '--num-partitions',
-        type=int,
-        default=multiprocessing.cpu_count(),
-        help='number of partitions to parallelize processing, e.g. cpu cores * number of workers'
-    )
+    # parser.add_argument(
+    #     '--num-partitions',
+    #     type=int,
+    #     default=multiprocessing.cpu_count(),
+    #     help='number of partitions to parallelize processing, e.g. cpu cores * number of workers'
+    # )
 
     parser.add_argument(
         '--items-dir',
