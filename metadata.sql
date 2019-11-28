@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS default.metadata
     same_viewed_bought UInt8 -- if also_bought identical to also_viewed, 0 means no, any other value means yes
 ) ENGINE = MergeTree()
 PARTITION BY substring(asin, 1, 1)  -- use first character of asin as partition key, not for speed up, only for data manupilation
-ORDER BY (asin)
+ORDER BY (same_viewed_bought, asin)

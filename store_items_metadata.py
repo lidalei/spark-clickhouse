@@ -44,33 +44,10 @@ class ClickhouseClient(object):
 
         return exceptions
 
-    def insert_partition(self, insert_sql: str, iterator: typing.Iterable, batch_size: int):
-        total_rows_inserted = 0
-        total_rows_failed = 0
-        for batch in create_batch(iterator, batch_size):
-            try:
-                n = self.cli.execute(insert_sql, batch)
-                logging.info(f'inserted {n} rows')
-            except (ServerException, Exception):
-                total_rows_failed += len(batch)
-                logging.exception('failed to insert a batch')
-            else:
-                total_rows_inserted += n
-
-        logging.info(
-            f'in total, successfully inserted {total_rows_inserted} rows, failed to insert {total_rows_failed} rows')
-
-
-def create_batch(iterator, batch_size: int):
-    batch = []
-    for x in iterator:
-        batch.append(x)
-        if len(batch) >= batch_size:
-            yield batch
-            batch.clear()
-    # yield final batch
-    if len(batch) > 0:
-        yield batch
+    @retry((Exception,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
+    def insert_partition(self, insert_sql: str, iterator: typing.Iterable):
+        n = self.cli.execute(insert_sql, iterator)
+        logging.info(f'inserted {n} rows')
 
 
 def same_also_bought_also_viewed(product: dict):
@@ -125,9 +102,9 @@ def main(args: argparse.Namespace):
 
     # parse items json files
     conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
-        'spark.executor.memory', '4g'
+        'spark.executor.memory', '6g'
     ).set(
-        'spark.driver.memory', '4g'
+        'spark.driver.memory', '6g'
     )
     sc = SparkContext(conf=conf)
     sc.setLogLevel('INFO')
@@ -160,7 +137,6 @@ def main(args: argparse.Namespace):
         lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
             f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
             iterator,
-            args.batch_size
         )
     )
 
@@ -191,7 +167,6 @@ def main(args: argparse.Namespace):
         lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
             f'INSERT INTO {args.metadata_table_name} (asin, price_in_cents, same_viewed_bought) VALUES',
             iterator,
-            args.batch_size
         )
     )
 
@@ -244,7 +219,6 @@ def stream_main(args: argparse.Namespace):
             lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
                 f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
                 iterator,
-                args.batch_size
             )
         )
     )
@@ -335,12 +309,6 @@ if __name__ == '__main__':
         type=str,
         default='metadata.sql',
         help='an SQL file which creates clickhouse table metadata'
-    )
-    parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=1000,
-        help='batch size when inserting rows into clickhouse table items'
     )
 
     args, _ = parser.parse_known_args()

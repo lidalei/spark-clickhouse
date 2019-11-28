@@ -38,9 +38,21 @@ sudo docker-compose build
 # export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
 # export ITEMS_DIR=data/items
 # export METADATA_DIR=data/metadata
-# export NUM_PARTITIONS=1000
-# export BATCH_SIZE=1000
 sudo docker-compose up
 
 # check runnig containers status
 # docker stats
+
+# forward clickhouse http interface
+gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-3" -- -L 4040:localhost:4040 -L 8888:localhost:8888
+
+# give 127.0.0.1:8888 a public host so that grafana in a container does not resolve it wronlgy
+ngrok http 8888
+
+# start grafana
+docker run -d --name=grafana -p 3000:3000 \
+    -e GF_INSTALL_PLUGINS=vertamedia-clickhouse-datasource \
+    -e GF_SECURITY_ADMIN_USER=guess \
+    -e GF_SECURITY_ADMIN_PASSWORD=youneverknow \
+    grafana/grafana
+

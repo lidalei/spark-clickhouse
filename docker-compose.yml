@@ -27,7 +27,6 @@ services:
       # - NUM_PARTITIONS=${NUM_PARTITIONS}
       - ITEMS_DIR=${ITEMS_DIR}
       - METADATA_DIR=${METADATA_DIR}
-      - BATCH_SIZE=${BATCH_SIZE}
     ports:
       # UI
       - "4040:4040"
@@ -40,14 +39,3 @@ services:
     links:
       - clickhouse
     restart: on-failure
-  grafana:
-    # TODO: use chproxy to cache response, rate limit requests
-    image: "grafana/grafana"
-    ports:
-      - "3000:3000"
-    environment:
-      GF_INSTALL_PLUGINS: "vertamedia-clickhouse-datasource"
-      GF_SECURITY_ADMIN_USER: "guess"
-      GF_SECURITY_ADMIN_PASSWORD: "youneverknow"
-    mem_limit: 1G
-    mem_reservation: 500M
