@@ -43,13 +43,17 @@ services:
         reservations:
           cpus: "2"
           memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     volumes:
       - ./data:/app/data
     depends_on:
       - clickhouse
     links:
       - clickhouse
-    restart: on-failure
   grafana:
     # TODO: use chproxy to cache response, rate limit requests
     image: "grafana/grafana"
