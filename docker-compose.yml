@@ -24,7 +24,8 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - CLICKHOUSE_PASSWORD
+      - CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
+      - NUM_PARTITIONS=1
       - ITEMS_DIR=data/items
       - METADATA_DIR=data/metadata
     ports:
