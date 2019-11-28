@@ -267,6 +267,6 @@ if __name__ == '__main__':
     )
 
     args, _ = parser.parse_known_args()
-    logging.info(f'args: {args}')
+    logging.debug(f'args: {args}')
 
     main(args)

@@ -1,23 +1,11 @@
-# Dimensional modeling
+# Amazon Reivews & Product Metadata Insights
+
+We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
+
+## Run
+
 
 ## Reviews
-
-```shell
-curl -I https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz
-```
-
-```text
-HTTP/1.1 200 OK
-x-amz-id-2: 0EbUdtgbEa6EoA8FOHmja88N0CghxjR5LfMRMvCdqIKHJSSbjMQ0eo9rZju/C1O1VIhckkaZ5PM=
-x-amz-request-id: DB1A5D89CF1057E5
-Date: Fri, 22 Nov 2019 10:19:29 GMT
-Last-Modified: Fri, 15 Jan 2016 10:35:17 GMT
-ETag: "8caf1a04ba08f82781e7bc01cfd47896-2283"
-Accept-Ranges: bytes
-Content-Type: application/json
-Content-Length: 19150810764
-Server: AmazonS3
-```
 
 ### Sample review
 
@@ -50,23 +38,6 @@ reviewTime - time of the review (raw)
 ```
 
 ## Metadata
-
-```shell
-curl -I https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/metadata.json.gz
-```
-
-```text
-HTTP/1.1 200 OK
-x-amz-id-2: VKlr1Vmy6Q3EPuNYRZfv1BKSd75Z65NhyMbmtR4RoqCWTF+Cgq5JxZeYxQL9YH5Jmlvqlbakdz4=
-x-amz-request-id: 0BFE07A65B37D854
-Date: Fri, 22 Nov 2019 10:19:51 GMT
-Last-Modified: Fri, 15 Jan 2016 10:49:11 GMT
-ETag: "37f89c297f08c822e21b634bf2c9ef2a-401"
-Accept-Ranges: bytes
-Content-Type: application/json
-Content-Length: 3358565493
-Server: AmazonS3
-```
 
 ### Sample item
 
@@ -105,33 +76,17 @@ categories - list of categories the product belongs to
 
 ```shell
 curl -o item_dedup.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz
-```
-
-gave
-
-```text
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100 17.8G  100 17.8G    0     0  63.9M      0  0:04:45  0:04:45 --:--:-- 62.1M
-```
-
-```shell
 curl -o metadata.json.gz https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/metadata.json.gz
 ```
 
-gave
+```shell
 
-```text
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100 3202M  100 3202M    0     0  63.7M      0  0:00:50  0:00:50 --:--:-- 62.6M
 ```
-
 
 ### Stream remote json file
 
 ```python
 import requests
-r = requests.get('https://api.github.com/events', stream=True)
+r = requests.get('https://s3-eu-west-1.amazonaws.com/bigdata-team/job-interview/item_dedup.json.gz', stream=True)
 help(r.iter_lines)
 ```
