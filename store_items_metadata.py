@@ -4,10 +4,10 @@ import logging
 import multiprocessing
 import typing
 
-from clickhouse_driver.errors import ServerException, LogicalError
+from clickhouse_driver.errors import ServerException, LogicalError, NetworkError
 from pyspark import SparkContext, SparkConf
 # from pyspark.streaming import StreamingContext
-
+from retry import retry
 from clickhouse_driver import Client
 
 LOG_FORMAT = '%(asctime)s %(process)d %(filename)s %(lineno)d %(message)s'
@@ -16,15 +16,19 @@ LOG_FORMAT = '%(asctime)s %(process)d %(filename)s %(lineno)d %(message)s'
 class ClickhouseClient(object):
     def __init__(self, host, logfmt, loglvl=logging.INFO):
         self.host = host
-        self.cli = Client.from_url(host)
-        # perform a test
-        sum = self.cli.execute('SELECT 1 + 1')
-        if sum[0][0] != 2:
-            raise LogicalError(f'1 + 1 = {sum[0][0]}')
-
         # set logging format and level in driver / worker
         logging.basicConfig(format=logfmt)
         logging.getLogger().setLevel(loglvl)
+
+        self.cli = Client.from_url(host)
+        # perform a test
+        self.test()
+
+    @retry((NetworkError,), tries=5, delay=1, backoff=2, jitter=1, max_delay=10)
+    def test(self):
+        res = self.cli.execute('SELECT 1 + 1')
+        if res[0][0] != 2:
+            raise LogicalError(f'1 + 1 = {res[0][0]}')
 
     def execute_sqls(self, sqls: typing.List[str]) -> typing.List[Exception]:
         """connect to clickhouse server and execute given sql statements """
