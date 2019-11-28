@@ -100,6 +100,7 @@ def parse_review_time(x: dict) -> int:
     except:
         return 0
 
+
 def main(args: argparse.Namespace):
     # construct clickhouse host url
     ck_host = f'clickhouse://{args.clickhouse_username}:{args.clickhouse_password}@{args.clickhouse_server}/default'
