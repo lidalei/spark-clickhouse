@@ -23,11 +23,11 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
-      - NUM_PARTITIONS=1
-      - ITEMS_DIR=data/items
-      - METADATA_DIR=data/metadata
-      - BATCH_SIZE=1000
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - NUM_PARTITIONS=${NUM_PARTITIONS}
+      - ITEMS_DIR=${ITEMS_DIR}
+      - METADATA_DIR=${METADATA_DIR}
+      - BATCH_SIZE=${BATCH_SIZE}
     ports:
       # UI
       - "4040:4040"
