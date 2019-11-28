@@ -36,7 +36,6 @@ class ClickhouseClient(object):
 
     @retry((ServerException, SocketTimeoutError, NetworkError,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
     def insert_partition(self, insert_sql: str, iterator: typing.Iterable):
-        logging.error(f'type: {type(iterator)}')
 
         def generator():
             for v in iterator:
