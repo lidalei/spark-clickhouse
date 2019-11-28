@@ -18,6 +18,7 @@ services:
       - ./users.xml:/etc/clickhouse-server/users.xml
   spark-job:
     build:
+      context: .
       dockerfile: Dockerfile
     environment:
       - CLICKHOUSE_PASSWORD
