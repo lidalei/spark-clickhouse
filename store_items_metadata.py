@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import multiprocessing
 import typing
 from datetime import datetime
 
@@ -87,8 +86,6 @@ def main(args: argparse.Namespace):
                 f'table {table} does not exist, create it and retry later')
             return
 
-    logging.info(f'successfully created tables {tables}')
-
     # parse items json files
     conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
         'spark.executor.memory', '6g'
@@ -105,17 +102,11 @@ def main(args: argparse.Namespace):
     # FIXME!
     # partitioned_items = items.repartition(args.num_partitions)
     # j_items = partitioned_items.map(lambda line: json.loads(line))
-    """
-    reviewerID FixedString(14), -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
-    asin FixedString(10), -- ID of the product, e.g. 0000013714
-    overall UInt8, -- rating of the product, e.g. 5
-    unixReviewTime DateTime('UTC') -- time of the review (unix time)
-    """
     cleaned_j_items = j_items.filter(
-        lambda x: ('reviewerID' in x) and ('asin' in x) and ('overall' in x)
+        lambda x: ('asin' in x) and ('overall' in x)
     )
     dict_items = cleaned_j_items.map(lambda x: {
-        'reviewerID': x['reviewerID'],
+        'reviewerID': x['reviewerID'] if 'reviewerID' in x else None,
         'asin': x['asin'],
         'overall': int(x['overall']),
         'unixReviewTime': parse_review_time(x),

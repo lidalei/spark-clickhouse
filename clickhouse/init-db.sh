@@ -5,7 +5,7 @@ clickhouse client --user $CLICKHOUSE_USER --password $CLICKHOUSE_PASSWORD -n -m 
   -- create items table and its bufferred table
   CREATE TABLE IF NOT EXISTS default.items_t
   (
-    reviewerID String, -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
+    reviewerID Nullable(String), -- ID of the reviewer, e.g. A2SUAM1J3GNN3B
     asin String, -- ID of the product, e.g. 0000013714
     overall UInt8, -- rating of the product, e.g. 5
     unixReviewTime DateTime('UTC'), -- time of the review (unix time)
