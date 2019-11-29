@@ -2,6 +2,42 @@
 
 We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
 
+## Insights
+
+### Histogram of review score
+
+```sql
+SELECT overall, COUNT() as c from items group by overall ORDER BY overall
+```
+
+took 0.09 s and gave
+
+```csv
+overall,c
+1,2827585
+2,2278286
+3,4266987
+4,10188371
+5,32218922
+```
+
+The histogram of overall in tabix ![overall histogram](overall_histogram.png).
+
+We can filter by reviewer or review time and get overall distribution from a list of reviewers or during a period. We can also get heatmap which shows distribution evolution over time.
+
+### Same `also_bought` and `also_viewed`
+
+```sql
+SELECT SUM(same_viewed_bought) AS same, COUNT() AS total FROM metadata
+```
+
+took 0.01 s and gave
+
+```csv
+same,total
+4547982,9430088
+```
+
 ## Run
 
 1. Run `scrips/install.sh` to install Docker and Docker Compose on Ubuntu
