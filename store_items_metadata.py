@@ -3,40 +3,13 @@ import json
 import logging
 from datetime import datetime
 
-from clickhouse_driver.errors import ServerException, LogicalError, NetworkError, SocketTimeoutError
 from pyspark import SparkContext, SparkConf
 from pyspark.streaming import StreamingContext
-from retry import retry
-from clickhouse_driver import Client
+
+from download import download_unzip_large_gz_file
+from clickhouse_client import ClickhouseClient
 
 LOG_FORMAT = '%(asctime)s %(process)d %(filename)s %(lineno)d %(message)s'
-
-
-class ClickhouseClient(object):
-    def __init__(self, host, logfmt, loglvl=logging.INFO):
-        self.host = host
-        # set logging format and level in driver / worker
-        logging.basicConfig(format=logfmt)
-        logging.getLogger().setLevel(loglvl)
-
-        self.cli = Client.from_url(host)
-        # perform a test
-        self.test()
-
-    @retry((NetworkError, ConnectionResetError,), tries=5, delay=3, backoff=2, jitter=1, max_delay=10)
-    def test(self):
-        res = self.cli.execute('SELECT 1 + 1')
-        if res[0][0] != 2:
-            raise LogicalError(f'1 + 1 = {res[0][0]}')
-
-    def execute_sql(self, sql: str):
-        return self.cli.execute(sql)
-
-    @retry((ServerException, SocketTimeoutError, NetworkError,), tries=10, delay=5, backoff=2, jitter=1, max_delay=60)
-    def insert_partition(self, insert_sql: str, iterator: map):
-        # convert iterator to list in order to retry in case of exceptions
-        n = self.cli.execute(insert_sql, list(iterator))
-        logging.info(f'inserted {n} rows')
 
 
 def same_also_bought_also_viewed(product: dict):
@@ -67,38 +40,10 @@ def parse_review_time(x: dict) -> int:
         return 0
 
 
-def main(args: argparse.Namespace):
-    # construct clickhouse host url
-    ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/default'
-    ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
-    # check if items and metadata table exist
-    tables = [args.items_table_name, args.metadata_table_name]
-    res = ck_cli.execute_sql(f'SHOW TABLES FROM {args.clickhouse_db}')
-    db_tables = [t[0] for t in res]
-    for table in tables:
-        if table not in db_tables:
-            logging.error(
-                f'table {table} does not exist, create it and retry later')
-            return
-
-    # parse items json files
-    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
-        'spark.executor.memory', '6g'
-    ).set(
-        'spark.driver.memory', '6g'
-    )
-    sc = SparkContext(conf=conf)
-    sc.setLogLevel('INFO')
-
-    # gzip file cannot be split. So only one worker is utilized.
-    #  We need to repartition RDD to parallelize.
+def process_metadata(sc: SparkContext, path_to_file: str, ck_host: str, ck_table_name: str):
     # parse metadata json files
-    metadata = sc.textFile(args.metadata_dir)
+    metadata = sc.textFile(path_to_file)
     d_metadata = metadata.map(lambda line: eval(line))
-    # FIXME!
-    # partitioned_metadata = metadata.repartition(args.num_partitions)
-    # d_metadata = partitioned_metadata.map(lambda line: eval(line))
-    # print(d_metadata.sample(withReplacement=False, fraction=0.01).collect())
     """
     asin String, -- ID of the product, e.g. 0000013714
     -- price_in_cents Nullable(UInt32), -- price in unit of cents, e.g. 5.30 is stored as 530
@@ -117,17 +62,16 @@ def main(args: argparse.Namespace):
 
     dict_metadata.foreachPartition(
         lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
-            f'INSERT INTO {args.metadata_table_name} (asin, price_in_cents, same_viewed_bought) VALUES',
+            f'INSERT INTO {ck_table_name} (asin, price_in_cents, same_viewed_bought) VALUES',
             iterator,
         )
     )
 
+
+def process_items(sc: SparkContext, path_to_file: str, ck_host: str, ck_table_name: str):
     # parse items json files and insert into clickhouse
-    items = sc.textFile(args.items_dir)
+    items = sc.textFile(path_to_file)
     j_items = items.map(lambda line: json.loads(line))
-    # FIXME!
-    # partitioned_items = items.repartition(args.num_partitions)
-    # j_items = partitioned_items.map(lambda line: json.loads(line))
     cleaned_j_items = j_items.filter(
         lambda x: ('asin' in x) and ('overall' in x)
     )
@@ -141,63 +85,71 @@ def main(args: argparse.Namespace):
     # we establish a connection for each partition
     dict_items.foreachPartition(
         lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
-            f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
+            f'INSERT INTO {ck_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
             iterator,
         )
     )
 
 
-def stream_main(args: argparse.Namespace):
-    # construct clickhouse host url
-    ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/default'
-    ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
-    # create items and metadata table
-
-    # check if items and metadata table exist
-    tables = [args.items_table_name, args.metadata_table_name]
-    res = ck_cli.execute_sql(f'SHOW TABLES FROM {args.clickhouse_db}')
-    for table in tables:
-        if table not in res[0]:
-            logging.error(
-                f'table {table} does not exist, create it and retry later')
-            return
-
-    logging.info(f'successfully created tables {tables}')
-
-    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
-        'spark.executor.memory', '2g'
-    ).set(
-        'spark.driver.memory', '2g'
-    )
-    sc = SparkContext(conf=conf)
+def _process_items_stream(sc: SparkContext, items_dir: str, ck_host: str, ck_table_name: str):
+    """A streaming solution, not working yet"""
     # Create a local StreamingContext with two working thread and batch interval of 10 seconds
-    # FIXME! 10s -> XXX
     ssc = StreamingContext(sc, batchDuration=10)
-    items = ssc.textFileStream(args.items_dir)
-    items.count().pprint()
+    items = ssc.textFileStream(items_dir)
 
     j_items = items.map(lambda line: json.loads(line))
-    dict_items = j_items.map(lambda x: {
-        'reviewerID': x['reviewerID'],
+    cleaned_j_items = j_items.filter(
+        lambda x: ('asin' in x) and ('overall' in x)
+    )
+    dict_items = cleaned_j_items.map(lambda x: {
+        'reviewerID': x['reviewerID'] if 'reviewerID' in x else None,
         'asin': x['asin'],
         'overall': int(x['overall']),
-        'unixReviewTime': int(x['unixReviewTime'])
+        'unixReviewTime': parse_review_time(x),
     })
 
     # we establish a connection for each partition
     dict_items.foreachRDD(
         lambda rdd: rdd.foreachPartition(
             lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
-                f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
+                f'INSERT INTO {ck_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
                 iterator,
             )
         )
     )
 
     ssc.start()             # Start the computation
-
-    # rename file
+    # FIXME! download file in order to start to process
     ssc.awaitTermination()  # Wait for the computation to terminate
+
+
+def main(args: argparse.Namespace):
+    # construct clickhouse host url
+    ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/{args.clickhouse_db}'
+    ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
+    # check if items and metadata table exist
+    tables = [args.items_table_name, args.metadata_table_name]
+    missing_tables = ck_cli.tables_nonexist(tables)
+    if len(missing_tables) > 0:
+        logging.error(f'tables {missing_tables} do not exist, create them and retry later')
+        return
+
+    # create SparkContext
+    conf = SparkConf().setAppName(args.app_name).setMaster(args.spark_master).set(
+        'spark.executor.memory', args.spark_executor_memory
+    ).set(
+        'spark.driver.memory', args.spark_driver_memory
+    )
+    sc = SparkContext(conf=conf)
+    sc.setLogLevel('INFO')
+
+    # download metadata file and write data into a clickhouse table
+    download_unzip_large_gz_file(args.metadata_uri, args.metadata_file)
+    process_metadata(sc, args.metadata_file, ck_host, args.metadata_table_name)
+
+    # download items file and write data into a clickhouse table
+    download_unzip_large_gz_file(args.items_uri, args.items_file)
+    process_items(sc, args.items_file, ck_host, args.items_table_name)
 
 
 if __name__ == '__main__':
@@ -219,6 +171,18 @@ if __name__ == '__main__':
         default='local[*]',
         help='Spark master'
     )
+    parser.add_argument(
+        '--spark-driver-memory',
+        type=str,
+        default='6g',
+        help='Spark driver memory'
+    )
+    parser.add_argument(
+        '--spark-executor-memory',
+        type=str,
+        default='6g',
+        help='Spark executor memory'
+    )
     # parser.add_argument(
     #     '--num-partitions',
     #     type=int,
@@ -227,16 +191,28 @@ if __name__ == '__main__':
     # )
 
     parser.add_argument(
-        '--items-dir',
+        '--items-uri',
         type=str,
-        default='data/items/',
-        help='a directory which contains items json file'
+        default='data/items/item_dedup_sample.json',
+        help='uri of a gzipped items json file '
     )
     parser.add_argument(
-        '--metadata-dir',
+        '--items-file',
         type=str,
-        default='data/metadata/',
-        help='a directory which contains metadata json file'
+        default='data/items/item_dedup_sample.json',
+        help='path to an items json file'
+    )
+    parser.add_argument(
+        '--metadata-uri',
+        type=str,
+        default='data/metadata/metadata_sample.json',
+        help='uri of a gzipped metadata json file'
+    )
+    parser.add_argument(
+        '--metadata-file',
+        type=str,
+        default='data/metadata/metadata_sample.json',
+        help='path to a metadata json file'
     )
 
     parser.add_argument(
@@ -279,5 +255,4 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
     logging.info(f'args: {args}')
 
-    # stream_main(args)
     main(args)
