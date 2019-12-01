@@ -29,7 +29,7 @@ def download_unzip_large_gz_file(uri: str, target_file: str, chunk_size=1024 * 1
         return
 
     res = requests.head(uri)
-    target_file_size = res.headers['Content-Length']
+    target_file_size = int(res.headers['Content-Length'])
 
     file_size = _get_file_size(target_file)
     # FIXME! Maybe download the gzipped file in the meantime to have an accurate check
