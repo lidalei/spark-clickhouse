@@ -13,12 +13,12 @@ SELECT overall, COUNT() as c from items group by overall ORDER BY overall
 took 0.09 s and gave
 
 ```csv
-overall,c
-1,2827585
-2,2278286
-3,4266987
-4,10188371
-5,32218922
+"overall","c"
+1,6767032
+2,4290617
+3,7083694
+4,15543602
+5,49372073
 ```
 
 The histogram of overall in tabix ![overall histogram](overall_histogram.png).
@@ -36,6 +36,7 @@ took 0.01 s and gave
 ```csv
 same,total
 4547982,9430088
+
 ```
 
 ## Run
