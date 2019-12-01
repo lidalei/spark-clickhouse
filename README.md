@@ -7,13 +7,13 @@ We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
 ### Histogram of review score
 
 ```sql
-SELECT overall, COUNT() as c from items group by overall ORDER BY overall
+SELECT overall, COUNT() as count from items group by overall ORDER BY overall
 ```
 
 took 0.15 sec and scanned 83,057,018 rows (79 MB) and gave
 
 ```csv
-"overall","c"
+"overall","count"
 1,6767032
 2,4290617
 3,7083694
@@ -36,7 +36,6 @@ took 0.21 s and scanned 9430088 rows (9 MB) and gave
 ```csv
 same,total
 4547982,9430088
-
 ```
 
 ## Run
