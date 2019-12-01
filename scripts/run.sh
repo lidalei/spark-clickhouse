@@ -48,6 +48,9 @@ docker-compose start clickhouse
 # start spark-job
 docker-compose start spark-job
 
+# check logs
+docker-compose logs -f spark-job
+
 # Stops containers and removes containers, networks, volumes, and images created by up.
 # docker-compose down
 

@@ -7,7 +7,7 @@ RUN apk add python3-dev~=3.7.5 && pip3 install -U pip
 ENV PYSPARK_PYTHON /usr/bin/python3
 
 # https://vsupalov.com/cache-docker-build-dependencies-without-volume-mounting/
-ADD ./requirements.txt /tmp/requirements.txt
+ADD ./docker-requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
 # Copy the source code
