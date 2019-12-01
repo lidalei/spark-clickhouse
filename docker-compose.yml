@@ -22,7 +22,7 @@ services:
       retries: 3
     volumes:
       # use host volume to store data
-      - ./clickhouse/database:/var/lib/clickhouse
+      - ../download-from-source/database:/var/lib/clickhouse
       - ./clickhouse/server/config.d/docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml
       - ./clickhouse/server/users.xml:/etc/clickhouse-server/users.xml
       - ./clickhouse/init-db.d:/docker-entrypoint-initdb.d
@@ -46,7 +46,7 @@ services:
     mem_limit: 10G
     mem_reservation: 2G
     volumes:
-      - ./data:/app/data
+      - ../download-from-source/data:/app/data
     depends_on:
       - clickhouse
     links:
