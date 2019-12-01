@@ -9,8 +9,9 @@ CREATE TABLE IF NOT EXISTS default.items_t
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(unixReviewDate)
 ORDER BY (overall, asin, unixReviewDate);
+
 -- Buffer(database, table, num_layers, min_time, max_time, min_rows, max_rows, min_bytes, max_bytes)
 CREATE TABLE IF NOT EXISTS default.items AS default.items_t ENGINE = Buffer(default, items_t, 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Check how many existing rows there are
-SELECT COUNT() FROM items;
+SELECT COUNT(), 'rows in table items' FROM items;

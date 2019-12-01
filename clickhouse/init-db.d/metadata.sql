@@ -8,8 +8,9 @@ CREATE TABLE IF NOT EXISTS default.metadata_t
 ) ENGINE = MergeTree()
 PARTITION BY substring(asin, 1, 1)  -- use first character of asin as partition key, not for speed up, only for data manipulation
 ORDER BY (same_viewed_bought, asin);
+
 -- Buffer(database, table, num_layers, min_time, max_time, min_rows, max_rows, min_bytes, max_bytes)
 CREATE TABLE IF NOT EXISTS default.metadata AS default.metadata_t ENGINE = Buffer(default, metadata_t, 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Check how many existing rows there are
-SELECT COUNT() FROM metadata;
+SELECT COUNT(), 'rows in table metadata' FROM metadata;
