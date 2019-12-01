@@ -14,4 +14,4 @@ ORDER BY (overall, asin, unixReviewDate);
 CREATE TABLE IF NOT EXISTS default.items AS default.items_t ENGINE = Buffer(default, items_t, 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Check how many existing rows there are
-SELECT COUNT(), 'rows in table items' FROM items;
+-- SELECT COUNT(), 'rows in table items' FROM items;

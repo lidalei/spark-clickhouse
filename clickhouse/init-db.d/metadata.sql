@@ -13,4 +13,4 @@ ORDER BY (same_viewed_bought, asin);
 CREATE TABLE IF NOT EXISTS default.metadata AS default.metadata_t ENGINE = Buffer(default, metadata_t, 16, 10, 100, 10000, 1000000, 10000000, 100000000);
 
 -- Check how many existing rows there are
-SELECT COUNT(), 'rows in table metadata' FROM metadata;
+-- SELECT COUNT(), 'rows in table metadata' FROM metadata;
