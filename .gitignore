@@ -1,2 +1,3 @@
 .idea
-clickhouse/database/*
+clickhouse/database/README.md
+!clickhouse/database/sss
