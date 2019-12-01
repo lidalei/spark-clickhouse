@@ -32,13 +32,25 @@ echo "files are ready"
 # docker run hello-world
 ## end docker postinstall
 
-# build docker containers
-sudo docker-compose build
-# run spark job to read those files and write to clickhouse
+## run spark job to read those files and write to clickhouse
+# export to overwrite .env
 # export CLICKHOUSE_PASSWORD=B1t7XFtEPGDUEIKD
 # export ITEMS_DIR=data/items
 # export METADATA_DIR=data/metadata
-sudo docker-compose up
+# verify configuration
+docker-compose config
+# build docker containers
+sudo docker-compose build
+# create service
+sudo docker-compose up --no-start
+# start clickhouse
+docker-compose start clickhouse
+# start spark-job
+docker-compose start spark-job
+
+# Stops containers and removes containers, networks, volumes, and images created by up.
+# docker-compose down
 
 # check runnig containers status
-# docker stats
+# docker-compose ps
+# docker-compose logs SERVICE
