@@ -1,4 +1,4 @@
 # ignore data folder
 data
 # ignore clickhouse server volume
-clickhouse/clickhouse-server
+clickhouse/database
