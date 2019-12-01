@@ -10,7 +10,7 @@ We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
 SELECT overall, COUNT() as c from items group by overall ORDER BY overall
 ```
 
-took 0.09 s and gave
+took 0.15 sec and scanned 83,057,018 rows (79 MB) and gave
 
 ```csv
 "overall","c"
@@ -31,7 +31,7 @@ We can filter by reviewer or review time and get overall distribution from a lis
 SELECT SUM(same_viewed_bought) AS same, COUNT() AS total FROM metadata
 ```
 
-took 0.01 s and gave
+took 0.21 s and scanned 9430088 rows (9 MB) and gave
 
 ```csv
 same,total

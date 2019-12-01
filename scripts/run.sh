@@ -1,3 +1,4 @@
+export AIRFLOW_HOME=~/airflow
 pip3 install -r scripts/requirements.txt
 
 airflow initdb &
