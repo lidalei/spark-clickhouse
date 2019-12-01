@@ -40,9 +40,9 @@ echo "files are ready"
 # verify configuration
 docker-compose config
 # build docker containers
-sudo docker-compose build
+docker-compose build
 # create service
-sudo docker-compose up --no-start
+docker-compose up --no-start
 # start clickhouse
 docker-compose start clickhouse
 # start spark-job

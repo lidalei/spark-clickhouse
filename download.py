@@ -32,7 +32,8 @@ def download_unzip_large_gz_file(uri: str, target_file: str, chunk_size=1024 * 1
     target_file_size = res.headers['Content-Length']
 
     file_size = _get_file_size(target_file)
-    if target_file_size == file_size:
+    # FIXME! Maybe download the gzipped file in the meantime to have an accurate check
+    if target_file_size > file_size:
         logging.info(f'{target_file} exists and has {file_size} bytes, do nothing')
         return
 
