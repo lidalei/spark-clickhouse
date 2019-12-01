@@ -28,6 +28,6 @@
         <!-- delay in seconds -->
         <max_delay_to_insert>5</max_delay_to_insert>
         <!-- default 300 -->
-        <parts_to_throw_insert>3000<parts_to_throw_insert>
+        <parts_to_throw_insert>3000</parts_to_throw_insert>
     </merge_tree>
 </yandex>

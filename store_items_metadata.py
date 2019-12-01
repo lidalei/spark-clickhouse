@@ -23,7 +23,7 @@ class ClickhouseClient(object):
         # perform a test
         self.test()
 
-    @retry((NetworkError, ConnectionResetError,), tries=5, delay=1, backoff=2, jitter=1, max_delay=10)
+    @retry((NetworkError, ConnectionResetError,), tries=5, delay=3, backoff=2, jitter=1, max_delay=10)
     def test(self):
         res = self.cli.execute('SELECT 1 + 1')
         if res[0][0] != 2:
