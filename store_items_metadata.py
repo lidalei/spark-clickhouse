@@ -88,6 +88,7 @@ def main(args: argparse.Namespace):
         'spark.driver.memory', '6g'
     )
     sc = SparkContext(conf=conf)
+    sc.setCheckpointDir(args.spark_checkpoint_dir)
     sc.setLogLevel('INFO')
 
     # gzip file cannot be split. So only one worker is utilized.
@@ -147,7 +148,7 @@ def main(args: argparse.Namespace):
     )
 
 
-def stream_main(args: argparse.Namespace):
+def create_ssc(args: argparse.Namespace):
     # construct clickhouse host url
     ck_host = f'clickhouse://{args.clickhouse_user}:{args.clickhouse_password}@{args.clickhouse_server}/default'
     ck_cli = ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO)
@@ -194,10 +195,9 @@ def stream_main(args: argparse.Namespace):
         )
     )
 
-    ssc.start()             # Start the computation
+    ssc.checkpoint(args.spark_checkpoint_dir)
 
-    # rename file
-    ssc.awaitTermination()  # Wait for the computation to terminate
+    return ssc
 
 
 if __name__ == '__main__':
@@ -218,6 +218,12 @@ if __name__ == '__main__':
         type=str,
         default='local[*]',
         help='Spark master'
+    )
+    parser.add_argument(
+        '--spark-checkpoint-dir',
+        type=str,
+        default='spark-checkpoint',
+        help='Spark checkpoint directory'
     )
     # parser.add_argument(
     #     '--num-partitions',
@@ -279,5 +285,8 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
     logging.info(f'args: {args}')
 
-    # stream_main(args)
-    main(args)
+    # main(args)
+
+    ssc = StreamingContext.getOrCreate(args.spark_checkpoint_dir, lambda: create_ssc(args))
+    ssc.start()             # Start the computation
+    ssc.awaitTermination()  # Wait for the computation to terminate
