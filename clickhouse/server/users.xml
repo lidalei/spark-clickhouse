@@ -78,6 +78,7 @@
                  All results of DNS requests are cached till server restart.
             -->
             <networks incl="networks" replace="replace">
+                <!--  FIXME! We should not allow traffic from all sources for security reasons -->
                 <ip>::/0</ip>
             </networks>
 

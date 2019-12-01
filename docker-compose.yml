@@ -28,8 +28,11 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - ./clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-      - ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      # use host volume to store data
+      - ./clickhouse/database:/var/lib/clickhouse
+      - ./clickhouse/server/config.d/docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml
+      - ./clickhouse/server/users.xml:/etc/clickhouse-server/users.xml
+      - ./clickhouse/init-db.d:/docker-entrypoint-initdb.d
   spark-job:
     build:
       context: .

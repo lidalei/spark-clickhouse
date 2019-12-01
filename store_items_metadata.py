@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import typing
 from datetime import datetime
 
 from clickhouse_driver.errors import ServerException, LogicalError, NetworkError, SocketTimeoutError
@@ -33,14 +32,10 @@ class ClickhouseClient(object):
     def execute_sql(self, sql: str):
         return self.cli.execute(sql)
 
-    @retry((ServerException, SocketTimeoutError, NetworkError,), tries=10, delay=1, backoff=2, jitter=1, max_delay=60)
-    def insert_partition(self, insert_sql: str, iterator: typing.Iterable):
-
-        def generator():
-            for v in iterator:
-                yield v
-
-        n = self.cli.execute(insert_sql, generator())
+    @retry((ServerException, SocketTimeoutError, NetworkError,), tries=10, delay=5, backoff=2, jitter=1, max_delay=60)
+    def insert_partition(self, insert_sql: str, iterator: map):
+        # convert iterator to list in order to retry in case of exceptions
+        n = self.cli.execute(insert_sql, list(iterator))
         logging.info(f'inserted {n} rows')
 
 
@@ -97,29 +92,6 @@ def main(args: argparse.Namespace):
 
     # gzip file cannot be split. So only one worker is utilized.
     #  We need to repartition RDD to parallelize.
-    items = sc.textFile(args.items_dir)
-    j_items = items.map(lambda line: json.loads(line))
-    # FIXME!
-    # partitioned_items = items.repartition(args.num_partitions)
-    # j_items = partitioned_items.map(lambda line: json.loads(line))
-    cleaned_j_items = j_items.filter(
-        lambda x: ('asin' in x) and ('overall' in x)
-    )
-    dict_items = cleaned_j_items.map(lambda x: {
-        'reviewerID': x['reviewerID'] if 'reviewerID' in x else None,
-        'asin': x['asin'],
-        'overall': int(x['overall']),
-        'unixReviewTime': parse_review_time(x),
-    })
-
-    # we establish a connection for each partition
-    dict_items.foreachPartition(
-        lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
-            f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
-            iterator,
-        )
-    )
-
     # parse metadata json files
     metadata = sc.textFile(args.metadata_dir)
     d_metadata = metadata.map(lambda line: eval(line))
@@ -146,6 +118,30 @@ def main(args: argparse.Namespace):
     dict_metadata.foreachPartition(
         lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
             f'INSERT INTO {args.metadata_table_name} (asin, price_in_cents, same_viewed_bought) VALUES',
+            iterator,
+        )
+    )
+
+    # parse items json files and insert into clickhouse
+    items = sc.textFile(args.items_dir)
+    j_items = items.map(lambda line: json.loads(line))
+    # FIXME!
+    # partitioned_items = items.repartition(args.num_partitions)
+    # j_items = partitioned_items.map(lambda line: json.loads(line))
+    cleaned_j_items = j_items.filter(
+        lambda x: ('asin' in x) and ('overall' in x)
+    )
+    dict_items = cleaned_j_items.map(lambda x: {
+        'reviewerID': x['reviewerID'] if 'reviewerID' in x else None,
+        'asin': x['asin'],
+        'overall': int(x['overall']),
+        'unixReviewTime': parse_review_time(x),
+    })
+
+    # we establish a connection for each partition
+    dict_items.foreachPartition(
+        lambda iterator: ClickhouseClient(ck_host, LOG_FORMAT, loglvl=logging.INFO).insert_partition(
+            f'INSERT INTO {args.items_table_name} (reviewerID, asin, overall, unixReviewTime) VALUES',
             iterator,
         )
     )
