@@ -27,3 +27,17 @@ sudo chmod +x /usr/local/bin/docker-compose
 # enable / disable this behavior
 # sudo systemctl enable docker
 # sudo systemctl disable docker
+
+## docker postinstall
+# https://docs.docker.com/install/linux/linux-postinstall/
+# sudo groupadd docker
+# sudo usermod -aG docker $USER
+# exit
+
+## reconnect o VM
+# gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-1"
+# activate the changes to groups
+# newgrp docker
+# verify
+# docker run hello-world
+## end docker postinstall
