@@ -15,10 +15,18 @@ services:
     mem_limit: 4G
     mem_reservation: 1G
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8123/"]
+      test:
+        [
+          "CMD",
+          "clickhouse",
+          "client",
+          "-u ${CLICKHOUSE_USER}",
+          "--password ${CLICKHOUSE_PASSWORD}",
+          "-q 'SELECT 1'",
+        ]
       interval: 30s
       timeout: 5s
-      retries: 3
+      retries: 10
     volumes:
       - ./clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
