@@ -1,6 +1,6 @@
-# Amazon Reivews & Product Metadata Insights
+# Amazon Reviews & Product Metadata Insights
 
-We use Docker Compose to containizer Spark Pipeline and Clickhouse Server.
+We use Docker Compose to containerize Spark Pipeline and ClickHouse Server.
 
 ## Insights
 
@@ -42,19 +42,19 @@ same,total
 
 1. Run `scrips/install.sh` to install Docker and Docker Compose on Ubuntu
 
-2. Run `scripts/run.sh` to read data and store parsed data in clickhouse
+2. Run `scripts/run.sh` to read data and store parsed data in ClickHouse
 
-3. Expose Clickhouse HTTP interface
+3. Expose ClickHouse HTTP interface
 
   ```shell
-  # forward clickhouse http interface
+  # forward ClickHouse http interface
   # gcloud compute --project "youtube8m-winner" ssh --zone "europe-west4-a" "instance-3" -- -L 4040:localhost:4040 -L 8888:localhost:8888
 
   # give 127.0.0.1:8888 a public host so that grafana in a container does not resolve it wronlgy
   # ngrok http 8888
   ```
   
-  `localhost:4040` points to Spark UI while `localhost:8888` points to Clickhouse HTTP interface.
+  `localhost:4040` points to Spark UI while `localhost:8888` points to ClickHouse HTTP interface.
 
   We need ngrok to give `localhost:8888` a unique and public accessible host so that grafana (in a container) is not confused.
 
